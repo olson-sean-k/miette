@@ -102,6 +102,9 @@ impl<T: Diagnostic + Send + Sync + 'static> From<T> for DiagnosticReport {
     }
 }
 
+/// Convenience alias. This is intended to be used as the return type for `main()`
+pub type DiagnosticResult<T> = Result<T, DiagnosticReport>;
+
 /**
 Protocol for [Diagnostic] handlers, which are responsible for actually printing out Diagnostics.
 
