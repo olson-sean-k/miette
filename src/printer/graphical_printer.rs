@@ -91,13 +91,18 @@ impl GraphicalReportPrinter {
             Some(Severity::Advice) => (self.theme.styles.advice, self.theme.characters.point_right),
         };
         write!(f, "{}", self.theme.characters.hbar.to_string().repeat(4))?;
-        if self.linkify_code && diagnostic.url().is_some() {
+        if self.linkify_code && diagnostic.url().is_some() && diagnostic.code().is_some() {
             let url = diagnostic.url().unwrap(); // safe
-            let code = format!("{} (click for details)", diagnostic.code());
+            let code = format!(
+                "{} (click for details)",
+                diagnostic
+                    .code()
+                    .expect("MIETTE BUG: already got checked for None")
+            );
             let link = format!("\u{1b}]8;;{}\u{1b}\\{}\u{1b}]8;;\u{1b}\\", url, code);
             write!(f, "[{}]", link.style(self.theme.styles.code))?;
-        } else {
-            write!(f, "[{}]", diagnostic.code().style(self.theme.styles.code))?;
+        } else if let Some(code) = diagnostic.code() {
+            write!(f, "[{}]", code.style(self.theme.styles.code))?;
         }
         writeln!(f, "{}", self.theme.characters.hbar.to_string().repeat(20),)?;
         writeln!(f)?;

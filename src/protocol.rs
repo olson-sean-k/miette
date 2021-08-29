@@ -22,7 +22,7 @@ pub trait Diagnostic: std::error::Error {
     /// the toplevel crate's documentation for easy searching. Rust path
     /// format (`foo::bar::baz`) is recommended, but more classic codes like
     /// `E0123` or Enums will work just fine.
-    fn code<'a>(&'a self) -> Box<dyn Display + 'a>;
+    fn code<'a>(&'a self) -> Option<Box<dyn Display + 'a>>;
 
     /// Diagnostic severity. This may be used by [DiagnosticReportPrinter]s to change the
     /// display format of this diagnostic.

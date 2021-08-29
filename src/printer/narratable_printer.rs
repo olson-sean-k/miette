@@ -75,7 +75,9 @@ impl NarratableReportPrinter {
         if let Some(help) = diagnostic.help() {
             writeln!(f, "diagnostic help: {}", help)?;
         }
-        writeln!(f, "diagnostic error code: {}", diagnostic.code())?;
+        if let Some(code) = diagnostic.code() {
+            writeln!(f, "diagnostic code: {}", code)?;
+        }
         if let Some(url) = diagnostic.url() {
             writeln!(f, "For more details, see {}", url)?;
         }
