@@ -205,7 +205,7 @@ impl Diagnostic {
 
                         quote! {
                             impl #impl_generics miette::Diagnostic for #ident #ty_generics #where_clause {
-                                fn code<'a>(&'a self) -> std::boxed::Box<dyn std::fmt::Display + 'a> {
+                                fn code<'a>(&'a self) -> std::option::Option<std::boxed::Box<dyn std::fmt::Display + 'a>> {
                                     #matcher
                                     #field_name.code()
                                 }

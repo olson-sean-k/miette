@@ -53,7 +53,7 @@ snippet line 2:   text
 snippet line 3:     here
 
 diagnostic help: try doing it better next time?
-diagnostic error code: oops::my::bad
+diagnostic code: oops::my::bad
 "#
     .trim_start()
     .to_string();
@@ -95,7 +95,7 @@ snippet line 2:   text
 snippet line 3:     here
 
 diagnostic help: try doing it better next time?
-diagnostic error code: oops::my::bad
+diagnostic code: oops::my::bad
 "#
     .trim_start()
     .to_string();
@@ -141,7 +141,7 @@ snippet line 2:   text text text text text
 snippet line 3:     here
 
 diagnostic help: try doing it better next time?
-diagnostic error code: oops::my::bad
+diagnostic code: oops::my::bad
 "#
     .trim_start()
     .to_string();
@@ -183,7 +183,7 @@ snippet line 2:   text
 snippet line 3:     here
 
 diagnostic help: try doing it better next time?
-diagnostic error code: oops::my::bad
+diagnostic code: oops::my::bad
 "#
     .trim_start()
     .to_string();
@@ -237,7 +237,7 @@ snippet line 4: line4
 snippet line 6: line5
 
 diagnostic help: try doing it better next time?
-diagnostic error code: oops::my::bad
+diagnostic code: oops::my::bad
 "#
     .trim_start()
     .to_string();
@@ -291,7 +291,7 @@ snippet line 4: line4
 snippet line 6: line5
 
 diagnostic help: try doing it better next time?
-diagnostic error code: oops::my::bad
+diagnostic code: oops::my::bad
 "#
     .trim_start()
     .to_string();
@@ -338,7 +338,7 @@ snippet line 3:     here
 snippet line 4: more here
 
 diagnostic help: try doing it better next time?
-diagnostic error code: oops::my::bad
+diagnostic code: oops::my::bad
 "#
     .trim_start()
     .to_string();
@@ -386,7 +386,7 @@ snippet line 2:   text
 snippet line 3:     here
 
 diagnostic help: try doing it better next time?
-diagnostic error code: oops::my::bad
+diagnostic code: oops::my::bad
 "#
     .trim_start()
     .to_string();
@@ -434,7 +434,7 @@ snippet line 2:   text
 snippet line 3:     here
 
 diagnostic help: try doing it better next time?
-diagnostic error code: oops::my::bad
+diagnostic code: oops::my::bad
 "#
     .trim_start()
     .to_string();
