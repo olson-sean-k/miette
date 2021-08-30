@@ -74,62 +74,8 @@ impl<T: Diagnostic + Send + Sync + 'static> From<T> for Box<dyn Diagnostic + 'st
     }
 }
 
-/**
-When used with `?`/`From`, this will wrap any Diagnostics and, when
-formatted with `Debug`, will fetch the current [DiagnosticReportPrinter] and
-use it to format the inner [Diagnostic].
-*/
-pub struct DiagnosticReport {
-    diagnostic: Box<dyn Diagnostic + Send + Sync + 'static>,
-}
-
-impl DiagnosticReport {
-    /// Return a reference to the inner [Diagnostic].
-    pub fn inner(&self) -> &(dyn Diagnostic + Send + Sync + 'static) {
-        &*self.diagnostic
-    }
-}
-
-impl std::fmt::Debug for DiagnosticReport {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::get_printer().debug(&*self.diagnostic, f)
-    }
-}
-
-impl<T: Diagnostic + Send + Sync + 'static> From<T> for DiagnosticReport {
-    fn from(diagnostic: T) -> Self {
-        DiagnosticReport {
-            diagnostic: Box::new(diagnostic),
-        }
-    }
-}
-
 /// Convenience alias. This is intended to be used as the return type for `main()`
-pub type DiagnosticResult<T> = Result<T, DiagnosticReport>;
-
-/**
-Protocol for [Diagnostic] handlers, which are responsible for actually printing out Diagnostics.
-
-Blatantly based on [EyreHandler](https://docs.rs/eyre/0.6.5/eyre/trait.EyreHandler.html) (thanks, Jane!)
-*/
-pub trait DiagnosticReportPrinter: core::any::Any + Send + Sync {
-    /// Define the report format.
-    fn debug(
-        &self,
-        diagnostic: &(dyn Diagnostic),
-        f: &mut core::fmt::Formatter<'_>,
-    ) -> core::fmt::Result;
-
-    /// Override for the `Display` format.
-    fn display(
-        &self,
-        diagnostic: &(dyn Diagnostic),
-        f: &mut core::fmt::Formatter<'_>,
-    ) -> core::fmt::Result {
-        write!(f, "{}", diagnostic)?;
-        Ok(())
-    }
-}
+pub type DiagnosticResult<T> = Result<T, crate::eyreish::Report>;
 
 /**
 [Diagnostic] severity. Intended to be used by [DiagnosticReportPrinter]s to change the

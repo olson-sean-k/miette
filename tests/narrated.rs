@@ -1,19 +1,19 @@
 use miette::{
-    Diagnostic, DiagnosticReport, GraphicalReportPrinter, GraphicalTheme, MietteError, NamedSource,
+    Diagnostic, Report, GraphicalReportPrinter, GraphicalTheme, MietteError, NamedSource,
     NarratableReportPrinter, SourceSpan,
 };
 use thiserror::Error;
 
-fn fmt_report(diag: DiagnosticReport) -> String {
+fn fmt_report(diag: Report) -> String {
     let mut out = String::new();
     // Mostly for dev purposes.
     if std::env::var("STYLE").is_ok() {
         GraphicalReportPrinter::new_themed(GraphicalTheme::unicode())
-            .render_report(&mut out, diag.inner())
+            .render_report(&mut out, diag.as_ref())
             .unwrap();
     } else {
         NarratableReportPrinter
-            .render_report(&mut out, diag.inner())
+            .render_report(&mut out, diag.as_ref())
             .unwrap();
     };
     out

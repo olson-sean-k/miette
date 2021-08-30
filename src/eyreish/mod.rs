@@ -25,9 +25,10 @@ use error::ErrorImpl;
 // pub use eyre as format_err;
 // /// Compatibility re-export of `eyre` for interopt with `anyhow`
 // pub use eyre as anyhow;
+use atty::Stream;
 use once_cell::sync::OnceCell;
-#[doc(hidden)]
-pub use DefaultHandler as DefaultContext;
+// #[doc(hidden)]
+// pub use DefaultHandler as DefaultContext;
 #[doc(hidden)]
 pub use EyreHandler as EyreContext;
 #[doc(hidden)]
@@ -37,7 +38,7 @@ pub use Report as Error;
 /// Compatibility re-export of `WrapErr` for interop with `anyhow`
 pub use WrapErr as Context;
 
-use crate::Diagnostic;
+use crate::{Diagnostic, GraphicalReportPrinter, NarratableReportPrinter};
 
 /**
 Core Diagnostic wrapper type.
@@ -75,7 +76,7 @@ pub fn set_hook(hook: ErrorHook) -> Result<(), InstallError> {
 #[cfg_attr(not(track_caller), allow(unused_mut))]
 fn capture_handler(error: &(dyn Diagnostic + 'static)) -> Box<dyn EyreHandler> {
     let hook = HOOK
-        .get_or_init(|| Box::new(DefaultHandler::default_with))
+        .get_or_init(|| Box::new(get_default_printer))
         .as_ref();
 
     let mut handler = hook(error);
@@ -87,6 +88,21 @@ fn capture_handler(error: &(dyn Diagnostic + 'static)) -> Box<dyn EyreHandler> {
 
     #[allow(clippy::let_and_return)]
     handler
+}
+
+fn get_default_printer(_err: &(dyn Diagnostic + 'static)) -> Box<dyn EyreHandler + 'static> {
+    let fancy = if let Ok(string) = std::env::var("NO_COLOR") {
+        string == "0"
+    } else if let Ok(string) = std::env::var("CLICOLOR") {
+        string != "0" || string == "1"
+    } else {
+        atty::is(Stream::Stdout) && atty::is(Stream::Stderr) && !ci_info::is_ci()
+    };
+    if fancy {
+        Box::new(GraphicalReportPrinter::new())
+    } else {
+        Box::new(NarratableReportPrinter)
+    }
 }
 
 impl dyn EyreHandler {
@@ -201,102 +217,6 @@ pub trait EyreHandler: core::any::Any + Send + Sync {
     /// Store the location of the caller who constructed this error report
     #[allow(unused_variables)]
     fn track_caller(&mut self, location: &'static std::panic::Location<'static>) {}
-}
-
-/// The default provided error report handler for `eyre::Report`.
-///
-/// On nightly this supports conditionally capturing a `std::backtrace::Backtrace` if the source
-/// error did not already capture one.
-#[allow(dead_code)]
-pub struct DefaultHandler {
-    backtrace: Option<Backtrace>,
-    #[cfg(track_caller)]
-    location: Option<&'static std::panic::Location<'static>>,
-}
-
-impl DefaultHandler {
-    #[allow(unused_variables)]
-    fn default_with(error: &(dyn Diagnostic + 'static)) -> Box<dyn EyreHandler> {
-        let backtrace = backtrace_if_absent!(error);
-
-        Box::new(Self {
-            backtrace,
-            #[cfg(track_caller)]
-            location: None,
-        })
-    }
-}
-
-impl core::fmt::Debug for DefaultHandler {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("DefaultHandler")
-            .field(
-                "backtrace",
-                match &self.backtrace {
-                    Some(_) => &"Some(Backtrace { ... })",
-                    None => &"None",
-                },
-            )
-            .finish()
-    }
-}
-
-impl EyreHandler for DefaultHandler {
-    fn debug(
-        &self,
-        error: &(dyn Diagnostic + 'static),
-        f: &mut core::fmt::Formatter<'_>,
-    ) -> core::fmt::Result {
-        use core::fmt::Write as _;
-
-        if f.alternate() {
-            return core::fmt::Debug::fmt(error, f);
-        }
-
-        write!(f, "{}", error)?;
-
-        if let Some(cause) = error.source() {
-            write!(f, "\n\nCaused by:")?;
-            let multiple = cause.source().is_some();
-            for (n, error) in crate::chain::Chain::new(cause).enumerate() {
-                writeln!(f)?;
-                if multiple {
-                    write!(indenter::indented(f).ind(n), "{}", error)?;
-                } else {
-                    write!(indenter::indented(f), "{}", error)?;
-                }
-            }
-        }
-
-        #[cfg(all(track_caller, feature = "track-caller"))]
-        {
-            if let Some(location) = self.location {
-                write!(f, "\n\nLocation:\n")?;
-                write!(indenter::indented(f), "{}", location)?;
-            }
-        }
-
-        #[cfg(backtrace)]
-        {
-            use std::backtrace::BacktraceStatus;
-
-            let backtrace = self
-                .backtrace
-                .as_ref()
-                .or_else(|| error.backtrace())
-                .expect("backtrace capture failed");
-            if let BacktraceStatus::Captured = backtrace.status() {
-                write!(f, "\n\nStack backtrace:\n{}", backtrace)?;
-            }
-        }
-
-        Ok(())
-    }
-
-    #[cfg(track_caller)]
-    fn track_caller(&mut self, location: &'static std::panic::Location<'static>) {
-        self.location = Some(location);
-    }
 }
 
 /// Iterator of a chain of source errors.

@@ -1,8 +1,8 @@
 use std::fmt;
 
 use crate::chain::Chain;
-use crate::protocol::{Diagnostic, DiagnosticReportPrinter, DiagnosticSnippet, Severity};
-use crate::{SourceSpan, SpanContents};
+use crate::protocol::{Diagnostic, DiagnosticSnippet, Severity};
+use crate::{EyreHandler, SourceSpan, SpanContents};
 
 /**
 [DiagnosticReportPrinter] that renders plain text and avoids extraneous graphics.
@@ -190,7 +190,7 @@ impl NarratableReportPrinter {
     }
 }
 
-impl DiagnosticReportPrinter for NarratableReportPrinter {
+impl EyreHandler for NarratableReportPrinter {
     fn debug(&self, diagnostic: &(dyn Diagnostic), f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if f.alternate() {
             return fmt::Debug::fmt(diagnostic, f);

@@ -4,8 +4,8 @@ use owo_colors::{OwoColorize, Style};
 
 use crate::chain::Chain;
 use crate::printer::theme::*;
-use crate::protocol::{Diagnostic, DiagnosticReportPrinter, DiagnosticSnippet, Severity};
-use crate::{SourceSpan, SpanContents};
+use crate::protocol::{Diagnostic, DiagnosticSnippet, Severity};
+use crate::{EyreHandler, SourceSpan, SpanContents};
 
 /**
 A [DiagnosticReportPrinter] that displays a given [crate::DiagnosticReport] in a quasi-graphical way, using terminal colors, unicode drawing characters, and other such things.
@@ -509,7 +509,7 @@ impl GraphicalReportPrinter {
     }
 }
 
-impl DiagnosticReportPrinter for GraphicalReportPrinter {
+impl EyreHandler for GraphicalReportPrinter {
     fn debug(&self, diagnostic: &(dyn Diagnostic), f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if f.alternate() {
             return fmt::Debug::fmt(diagnostic, f);
