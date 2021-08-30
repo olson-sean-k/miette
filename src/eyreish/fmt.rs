@@ -5,7 +5,7 @@ impl ErrorImpl<()> {
     pub(crate) fn display(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.handler
             .as_ref()
-            .map(|handler| handler.display(self.diagnostic(), f))
+            .map(|handler| handler.display(self.error(), f))
             .unwrap_or_else(|| core::fmt::Display::fmt(self.diagnostic(), f))
     }
 

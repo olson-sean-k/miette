@@ -80,6 +80,7 @@ impl Report {
             object_drop: object_drop::<E>,
             object_ref: object_ref::<E>,
             object_mut: object_mut::<E>,
+            object_ref_stderr: object_ref_stderr::<E>,
             object_boxed: object_boxed::<E>,
             object_downcast: object_downcast::<E>,
             object_drop_rest: object_drop_front::<E>,
@@ -102,6 +103,7 @@ impl Report {
             object_drop: object_drop::<MessageError<M>>,
             object_ref: object_ref::<MessageError<M>>,
             object_mut: object_mut::<MessageError<M>>,
+            object_ref_stderr: object_ref_stderr::<MessageError<M>>,
             object_boxed: object_boxed::<MessageError<M>>,
             object_downcast: object_downcast::<M>,
             object_drop_rest: object_drop_front::<M>,
@@ -125,6 +127,7 @@ impl Report {
             object_drop: object_drop::<DisplayError<M>>,
             object_ref: object_ref::<DisplayError<M>>,
             object_mut: object_mut::<DisplayError<M>>,
+            object_ref_stderr: object_ref_stderr::<DisplayError<M>>,
             object_boxed: object_boxed::<DisplayError<M>>,
             object_downcast: object_downcast::<M>,
             object_drop_rest: object_drop_front::<M>,
@@ -149,6 +152,7 @@ impl Report {
             object_drop: object_drop::<ContextError<D, E>>,
             object_ref: object_ref::<ContextError<D, E>>,
             object_mut: object_mut::<ContextError<D, E>>,
+            object_ref_stderr: object_ref_stderr::<ContextError<D, E>>,
             object_boxed: object_boxed::<ContextError<D, E>>,
             object_downcast: context_downcast::<D, E>,
             object_drop_rest: context_drop_rest::<D, E>,
@@ -170,6 +174,7 @@ impl Report {
             object_drop: object_drop::<BoxedError>,
             object_ref: object_ref::<BoxedError>,
             object_mut: object_mut::<BoxedError>,
+            object_ref_stderr: object_ref_stderr::<BoxedError>,
             object_boxed: object_boxed::<BoxedError>,
             object_downcast: object_downcast::<Box<dyn Diagnostic + Send + Sync>>,
             object_drop_rest: object_drop_front::<Box<dyn Diagnostic + Send + Sync>>,
@@ -273,6 +278,7 @@ impl Report {
             object_drop: object_drop::<ContextError<D, Report>>,
             object_ref: object_ref::<ContextError<D, Report>>,
             object_mut: object_mut::<ContextError<D, Report>>,
+            object_ref_stderr: object_ref_stderr::<ContextError<D, Report>>,
             object_boxed: object_boxed::<ContextError<D, Report>>,
             object_downcast: context_chain_downcast::<D>,
             object_drop_rest: context_chain_drop_rest::<D>,
@@ -312,7 +318,7 @@ impl Report {
     ///
     /// The root cause is the last error in the iterator produced by
     /// [`chain()`][Report::chain].
-    pub fn root_cause(&self) -> &(dyn Diagnostic + 'static) {
+    pub fn root_cause(&self) -> &(dyn StdError + 'static) {
         let mut chain = self.chain();
         let mut root_cause = chain.next().unwrap();
         for cause in chain {
@@ -507,6 +513,7 @@ struct ErrorVTable {
     object_drop: unsafe fn(Box<ErrorImpl<()>>),
     object_ref: unsafe fn(&ErrorImpl<()>) -> &(dyn Diagnostic + Send + Sync + 'static),
     object_mut: unsafe fn(&mut ErrorImpl<()>) -> &mut (dyn Diagnostic + Send + Sync + 'static),
+    object_ref_stderr: unsafe fn(&ErrorImpl<()>) -> &(dyn StdError + Send + Sync + 'static),
     #[allow(clippy::type_complexity)]
     object_boxed: unsafe fn(Box<ErrorImpl<()>>) -> Box<dyn Diagnostic + Send + Sync + 'static>,
     object_downcast: unsafe fn(&ErrorImpl<()>, TypeId) -> Option<NonNull<()>>,
@@ -547,6 +554,15 @@ where
 {
     // Attach E's native StdError vtable onto a pointer to self._object.
     &mut (*(e as *mut ErrorImpl<()> as *mut ErrorImpl<E>))._object
+}
+
+// Safety: requires layout of *e to match ErrorImpl<E>.
+unsafe fn object_ref_stderr<E>(e: &ErrorImpl<()>) -> &(dyn StdError + Send + Sync + 'static)
+where
+    E: StdError + Send + Sync + 'static,
+{
+    // Attach E's native StdError vtable onto a pointer to self._object.
+    &(*(e as *const ErrorImpl<()> as *const ErrorImpl<E>))._object
 }
 
 // Safety: requires layout of *e to match ErrorImpl<E>.
@@ -682,12 +698,18 @@ impl<E> ErrorImpl<E> {
     fn erase(&self) -> &ErrorImpl<()> {
         // Erase the concrete type of E but preserve the vtable in self.vtable
         // for manipulating the resulting thin pointer. This is analogous to an
-        // unsize coersion.
+        // unsize coercion.
         unsafe { &*(self as *const ErrorImpl<E> as *const ErrorImpl<()>) }
     }
 }
 
 impl ErrorImpl<()> {
+    pub(crate) fn error(&self) -> &(dyn StdError + Send + Sync + 'static) {
+        // Use vtable to attach E's native StdError vtable for the right
+        // original type E.
+        unsafe { &*(self.vtable.object_ref_stderr)(self) }
+    }
+
     pub(crate) fn diagnostic(&self) -> &(dyn Diagnostic + Send + Sync + 'static) {
         // Use vtable to attach E's native StdError vtable for the right
         // original type E.
@@ -701,18 +723,20 @@ impl ErrorImpl<()> {
     }
 
     pub(crate) fn chain(&self) -> Chain<'_> {
-        Chain::new(self.diagnostic() as &(dyn StdError + Send + Sync + 'static))
+        Chain::new(self.error())
     }
 }
 
-impl<E> std::error::Error for ErrorImpl<E>
+impl<E> StdError for ErrorImpl<E>
 where
-    E: std::error::Error,
+    E: StdError,
 {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         self.erase().diagnostic().source()
     }
 }
+
+impl<E> Diagnostic for ErrorImpl<E> where E: Diagnostic {}
 
 impl<E> Debug for ErrorImpl<E>
 where

@@ -64,6 +64,9 @@ impl core::fmt::Display for InstallError {
 impl StdError for InstallError {}
 impl Diagnostic for InstallError {}
 
+/**
+Set the hook?
+*/
 pub fn set_hook(hook: ErrorHook) -> Result<(), InstallError> {
     HOOK.set(hook).map_err(|_| InstallError)
 }
@@ -181,7 +184,7 @@ pub trait EyreHandler: core::any::Any + Send + Sync {
     /// Override for the `Display` format
     fn display(
         &self,
-        error: &(dyn Diagnostic + 'static),
+        error: &(dyn StdError + 'static),
         f: &mut core::fmt::Formatter<'_>,
     ) -> core::fmt::Result {
         write!(f, "{}", error)?;

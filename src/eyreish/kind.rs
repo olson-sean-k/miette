@@ -50,6 +50,8 @@ use core::fmt::{Debug, Display};
 
 use std::error::Error as StdError;
 
+use crate::Diagnostic;
+
 pub struct Adhoc;
 
 pub trait AdhocKind: Sized {
@@ -105,7 +107,7 @@ impl BoxedKind for Box<dyn StdError + Send + Sync> {}
 
 impl Boxed {
     #[cfg_attr(track_caller, track_caller)]
-    pub fn new(self, error: Box<dyn StdError + Send + Sync>) -> Report {
+    pub fn new(self, error: Box<dyn Diagnostic + Send + Sync>) -> Report {
         Report::from_boxed(error)
     }
 }

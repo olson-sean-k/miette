@@ -7,19 +7,21 @@ use std::error::Error as StdError;
 #[cfg(backtrace)]
 use std::backtrace::Backtrace;
 
+use crate::Diagnostic;
+
 mod ext {
     use super::*;
 
-    pub trait StdError {
+    pub trait Diag {
         #[cfg_attr(track_caller, track_caller)]
         fn ext_report<D>(self, msg: D) -> Report
         where
             D: Display + Send + Sync + 'static;
     }
 
-    impl<E> StdError for E
+    impl<E> Diag for E
     where
-        E: std::error::Error + Send + Sync + 'static,
+        E: Diagnostic + Send + Sync + 'static,
     {
         fn ext_report<D>(self, msg: D) -> Report
         where
@@ -29,7 +31,7 @@ mod ext {
         }
     }
 
-    impl StdError for Report {
+    impl Diag for Report {
         fn ext_report<D>(self, msg: D) -> Report
         where
             D: Display + Send + Sync + 'static,
@@ -41,7 +43,7 @@ mod ext {
 
 impl<T, E> WrapErr<T, E> for Result<T, E>
 where
-    E: ext::StdError + Send + Sync + 'static,
+    E: ext::Diag + Send + Sync + 'static,
 {
     fn wrap_err<D>(self, msg: D) -> Result<T, Report>
     where
@@ -160,9 +162,18 @@ where
     D: Display,
 {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
-        Some(self.error.inner.diagnostic())
+        Some(self.error.inner.error())
     }
 }
+
+impl<D, E> Diagnostic for ContextError<D, E>
+where
+    D: Display,
+    E: Diagnostic + 'static,
+{
+}
+
+impl<D> Diagnostic for ContextError<D, Report> where D: Display {}
 
 struct Quoted<D>(D);
 
@@ -189,6 +200,6 @@ pub(crate) mod private {
 
     pub trait Sealed {}
 
-    impl<T, E> Sealed for Result<T, E> where E: ext::StdError {}
+    impl<T, E> Sealed for Result<T, E> where E: ext::Diag {}
     impl<T> Sealed for Option<T> {}
 }

@@ -83,3 +83,6 @@ impl Display for BoxedError {
         Display::fmt(&self.0, f)
     }
 }
+
+impl StdError for BoxedError {}
+impl Diagnostic for BoxedError {}
